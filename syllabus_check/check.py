@@ -20,5 +20,5 @@ class Check:
     def passes(self):
         # Returns False if an error message has been created.
         self.errors = self.fun(*self.my_args)
-        return len(self.errors) < 0
+        return len(self.errors) == 0
 
