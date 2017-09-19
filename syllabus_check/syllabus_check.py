@@ -1,5 +1,6 @@
 # encoding: utf-8
 import os
+import sys
 
 # Excel workbook handling
 from xlrd import open_workbook
@@ -25,19 +26,19 @@ def check_sheet(sheet):
     Checks a single worksheet.
     """
     # Step 1: Setup environment
-    k_items = kamoku_maps[sheet.nrows] 
+    k_items = kamoku_maps.get(sheet.nrows)
 
-    result = ""
+    warnings = ""
     # Step 2: Execute checks in checks.
     # NOTE: Make sure we don't have to recreate the check_series each time.
     for check in checks:
-        ck = Check(*check, k_items, sheet)
+        ck = Check(check[0], check[1], k_items, sheet)
         if not ck.passes():
-            result += '\n□ ' + ck.msg
-            result += '\n' + ck.errors
+            warnings += '\n□ ' + ck.msg
+            warnings += '\n' + ck.errors
 
-    print(result)
-    return result
+    print(warnings)
+    return warnings
 
 
 def execute_checks(workbook):
@@ -53,7 +54,7 @@ def execute_checks(workbook):
 
     # Setup output file
     document = Document()
-    document.add_heading('シラバス点検 自動点検結果', 0)
+    document.add_heading(u'シラバス点検 自動点検結果', 0)
 
     # Get the sheets from the workbook
     sheets = xl_workbook.sheets()
@@ -65,18 +66,18 @@ def execute_checks(workbook):
                                    .split('\n'))
         class_str = sheet.cell_value(*kamoku_info['name'])
 
-        # Get check results
-        result = check_sheet(sheet)
+        # Get check warnings
+        warnings = check_sheet(sheet)
 
-        # Add results to document
+        # Add warnings to document
         document.add_heading('{}: {}'.format(sheet.name, teacher_str), level=2)
         p = document.add_paragraph()
         p.add_run('授業科目名: {}'.format(class_str)).bold = True
         p.paragraph_format.left_indent = Inches(0.5)
-        p.add_run('{}'.format(result))
+        p.add_run('{}'.format(warnings))
 
-        # Format colors according to result status
-        if len(result) == 0:
+        # Format colors according to warnings status
+        if warnings:
             p.add_run('\n => 点検OK。')
         else:
             p.add_run('\n => 上記の項目を確認し、必要な場合は修正を行ってください。')\
@@ -87,32 +88,32 @@ def execute_checks(workbook):
     document.save(result_location)
 
 
-def main():
+def main(path):
     """
     Finds all Workbooks in directory and checks the syllabus.
     """
-    # TODO: Allow the user to specify a path.
     # Read workbooks in directory
-    workbooks = [f for f in os.listdir('.')
-                 if os.path.isfile(f)
-                 and f.lower().endswith('.xls')]
+    workbooks = [f for f in os.listdir(path) if os.path.isfile(f) and 
+                 f.lower().endswith('.xls')]
 
     # TODO: Do we want to escape like this?
-    if len(workbooks) == 0:
+    if not workbooks:
         print('No workbooks in directory.')
         return
 
     # Create output directory if necessary
-    if not os.path.exists(RESULTS_FOLDER) and len(workbooks) > 0:
+    if not os.path.exists(RESULTS_FOLDER):
         os.makedirs(os.path.join(RESULTS_FOLDER))
 
     # Check syllabus for all workbooks.
     for wb in workbooks:
-        # try:
         execute_checks(wb)
-        # except Exception as e:
-        #     print("Error:", e)
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) >= 2:
+        path = os.path.normpath(sys.argv[1])
+    else:
+        path = os.getcwd()
+
+    main(path)

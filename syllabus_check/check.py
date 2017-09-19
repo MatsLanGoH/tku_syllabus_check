@@ -5,7 +5,7 @@ class Check:
     """
     A Check object should contain these elements:
     msg: A string describing the desired result of the check.
-    fun: The test function to conduct the test 
+    fun: The test function to conduct the test
          (this should return an error message if test fails)
     args: (Optional) arguments to pass into the test function.
 
